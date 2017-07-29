@@ -7,7 +7,7 @@ install:
   - pip install pytest==3.0.6
   - pip install coveralls pytest-cov pytest-warnings==0.2.0
   - pip install https://github.com/darcymason/pydicom/archive/master.zip
-  - pip install .
+  - pip install -e .
 # command to run tests
 script: py.test -W ignore --cov=cubric_mrs tests
 after_success:
