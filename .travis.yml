@@ -9,7 +9,7 @@ install:
   - pip install https://github.com/darcymason/pydicom/archive/master.zip
   - pip install .
 # command to run tests
-script: py.test -W ignore --cov .
+script: py.test -W ignore --cov=cubric_mrs tests
 after_success:
   - coveralls
 deploy:

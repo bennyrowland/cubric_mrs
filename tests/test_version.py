@@ -1,7 +1,10 @@
+import cubric_mrs
 
-def test_import():
-    import cubric_mrs
+import requests
+
+pypi_url = 'https://pypi.python.org/pypi/cubric_mrs/json'
 
 
 def test_version():
-    pass
+    r = requests.get(pypi_url)
+    assert cubric_mrs.__version__ not in r.json()["releases"].keys()

@@ -39,5 +39,5 @@ setup(
             'Programming Language :: Python :: 3.5',
         ],
         install_requires=['suspect', 'numpy'],
-        test_requires=['pytest']
+        test_requires=['pytest', 'requests']
 )
