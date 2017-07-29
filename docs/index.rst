@@ -6,6 +6,9 @@
 Welcome to cubric_mrs's documentation!
 ======================================
 
+This is the documentation for CUBRIC's MRS processing scripts, version
+|release|, last updated |today|
+
 Contents:
 
 .. toctree::
