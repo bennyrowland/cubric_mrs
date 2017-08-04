@@ -43,6 +43,6 @@ setup(
             'Programming Language :: Python :: 3.4',
             'Programming Language :: Python :: 3.5',
         ],
-        install_requires=['suspect', 'numpy'],
-        test_requires=['pytest', 'pyx', 'nibabel']
+        install_requires=['suspect', 'numpy', 'pyx', 'nibabel'],
+        test_requires=['pytest']
 )
