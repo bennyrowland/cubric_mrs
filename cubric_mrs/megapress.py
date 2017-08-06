@@ -2,8 +2,9 @@ import argparse
 import numpy as np
 import pyx
 import suspect
+import os
 
-from cubric_mrs import voxel
+from cubric_mrs import voxel, table
 
 # define some useful global parameters
 voxel_outline_color = pyx.color.rgb(1, 1, 0)
@@ -92,14 +93,18 @@ def analyse_mega(mega_path, t1_path=None, wref_path=None, out_path=None):
 
     if t1_path is not None:
         t1 = suspect.image.load_nifti(t1_path)
-        sag_canvas = voxel.get_sagittal_slice(t1, mega.position[0])
-        ax_canvas = voxel.get_axial_slice(t1, mega.position[2])
-        cor_canvas = voxel.get_coronal_slice(t1, mega.position[1])
+        voxel_canvases = voxel.get_voxel_slices(t1, mega)
 
     conc_table = metabolite_table(tarquin_results["metabolite_fits"],
                                   float(tarquin_off_results["metabolite_fits"]["TCr"]["concentration"]))
 
+    qual_table = quality_table(tarquin_results["quality"])
+
     one_page_canvas = pyx.canvas.canvas()
+    one_page_canvas.insert(table.file_table({
+        "T1": os.path.basename(t1_path),
+        "MEGAPRESS": os.path.basename(mega_path)
+    }), [pyx.trafo.translate(0, 6.0)])
     one_page_canvas.insert(diff_comparison, [pyx.trafo.translate(0, -diff_comparison.height - 0.5)])
     one_page_canvas.insert(drift_heatmap, [pyx.trafo.translate(10, -diff_comparison.height - 0.5)])
     one_page_canvas.insert(gaba_plot, [pyx.trafo.translate(0,
@@ -111,11 +116,12 @@ def analyse_mega(mega_path, t1_path=None, wref_path=None, out_path=None):
                                                                    - gaba_plot.height - 2.5)])
 
     if t1_path is not None:
-        one_page_canvas.insert(sag_canvas, [pyx.trafo.scale(6 / 256)])
-        one_page_canvas.insert(ax_canvas, [pyx.trafo.scale(1, -1, 0, 128).scaled(6 / 256).translated(6.5, 0)])
-        one_page_canvas.insert(cor_canvas, [pyx.trafo.scale(6 / 256).translated(13, 0)])
+        one_page_canvas.insert(voxel_canvases)
 
     one_page_canvas.insert(conc_table, [pyx.trafo.translate(10, -diff_comparison.height - 2)])
+
+    one_page_canvas.insert(qual_table,
+                           [pyx.trafo.translate(10, -diff_comparison.height - 2.5 - conc_table.bbox().height())])
 
     output_sheet = pyx.document.page(one_page_canvas,
                                      paperformat=pyx.document.paperformat.A4)
@@ -193,7 +199,7 @@ def plot_drift_heatmap(simple_data, corrected_data):
 
 def plot_fitted_gaba_spectrum(data, fit, gaba):
     gaba_plot = pyx.graph.graphxy(width=9, height=6,
-                                  x=pyx.graph.axis.linear(min=max_ppm, max=min_ppm, title="ppm"),
+                                  x=pyx.graph.axis.linear(min=max_ppm, max=min_ppm),
                                   y=pyx.graph.axis.linear(
                                       min=np.amin(data.real) * 0.2,
                                       max=np.amax(data.real) * 1.2,
@@ -204,7 +210,7 @@ def plot_fitted_gaba_spectrum(data, fit, gaba):
 
     gaba_plot.plot(pyx.graph.data.values(
         x=data.frequency_axis_ppm(),
-        y=data.real,
+        y=data.spectrum().real,
         title="Data"
 
     ),
@@ -290,6 +296,20 @@ def metabolite_table(concentrations, ref_cr):
 
     table_latex = table_runner.text(0, 0, table_string, [pyx.text.valign.top])
     return table_latex
+
+
+def quality_table(quality_info):
+    table_runner = pyx.text.LatexRunner()
+    table_runner.preamble("\\usepackage{tabularx}")
+    # now display the fit quality metrics
+    quality_strings = ["{} & {}\\\\\n".format(
+        param, value) for param, value in sorted(quality_info.items())]
+
+    quality_table_string = "\\begin{{tabularx}}{{9cm}}{{X r}}\nFit Parameters&\\\\\n\hline\n{}\\end{{tabularx}}".format(
+        "".join(quality_strings))
+
+    quality_table_latex = table_runner.text(0, 0, quality_table_string, [pyx.text.valign.top])
+    return quality_table_latex
 
 
 def megapress_script():

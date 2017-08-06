@@ -1,24 +1,9 @@
-import nibabel
 import numpy as np
 import PIL
 import pyx
-import scipy.interpolate
-import suspect
 
-
-def make_index_coords(shape, size):
-    x_pixel_size = size[0] / shape[0]
-    y_pixel_size = size[1] / shape[1]
-
-    i_coords = np.linspace(-x_pixel_size * (shape[0] - 1) / 2,
-                           x_pixel_size * (shape[0] - 1) / 2,
-                           shape[0],
-                           endpoint=True)
-    j_coords = np.linspace(-y_pixel_size * (shape[1] - 1) / 2,
-                           y_pixel_size * (shape[1] - 1) / 2,
-                           shape[1],
-                           endpoint=True)
-    return np.meshgrid(i_coords, j_coords)
+voxel_outline_color = pyx.color.rgb(1, 1, 0)
+voxel_outline_width = pyx.style.linewidth(1.0)
 
 
 def make_canvas(slice_array):
@@ -31,58 +16,50 @@ def make_canvas(slice_array):
     return slice_canvas
 
 
-def get_sagittal_slice(volume, x=0, shape=(256, 256), size=(256, 256)):
-
-    volume_centre = volume.to_scanner((np.array(volume.shape[::-1]) - 1) / 2)
-
-    II, JJ = make_index_coords(shape, size)
-
-    slice_coords = II[..., np.newaxis] * volume.coronal_vector + JJ[..., np.newaxis] * volume.axial_vector + volume_centre
-    slice_coords[:, :, 0] = x
-
-    slice_array = scipy.interpolate.interpn([np.arange(dim) for dim in volume.shape],
-                                            volume,
-                                            volume.from_scanner(slice_coords)[..., ::-1],
-                                            "linear",
-                                            bounds_error=False,
-                                            fill_value=0)
-
-    return make_canvas(slice_array)
-
-
-def get_axial_slice(volume, z=0, shape=(256, 256), size=(256, 256)):
-
-    volume_centre = volume.to_scanner((np.array(volume.shape[::-1]) - 1) / 2)
-
-    II, JJ = make_index_coords(shape, size)
-
-    slice_coords = II[..., np.newaxis] * volume.sagittal_vector + JJ[..., np.newaxis] * volume.coronal_vector + volume_centre
-    slice_coords[:, :, 2] = z
-
-    slice_array = scipy.interpolate.interpn([np.arange(dim) for dim in volume.shape],
-                                            volume,
-                                            volume.from_scanner(slice_coords)[..., ::-1],
-                                            "linear",
-                                            bounds_error=False,
-                                            fill_value=0)
-
-    return make_canvas(slice_array)
+def get_voxel_path(volume, mrs):
+    voxel_coords_mrs = [[-0.5, -0.5, -0.5],
+                        [0.5, -0.5, -0.5],
+                        [0.5, 0.5, -0.5],
+                        [-0.5, 0.5, -0.5],
+                        [-0.5, -0.5, -0.5],
+                        [-0.5, -0.5, 0.5],
+                        [0.5, -0.5, 0.5],
+                        [0.5, 0.5, 0.5],
+                        [-0.5, 0.5, 0.5],
+                        [-0.5, -0.5, 0.5],
+                        [0.5, -0.5, 0.5],
+                        [0.5, -0.5, -0.5],
+                        [0.5, 0.5, -0.5],
+                        [0.5, 0.5, 0.5],
+                        [-0.5, 0.5, 0.5],
+                        [-0.5, 0.5, -0.5]]
+    voxel_coords_volume = volume.from_scanner(mrs.to_scanner(voxel_coords_mrs))
+    path_points = [pyx.path.moveto(*voxel_coords_volume[0, 0:2])] + \
+                  [pyx.path.lineto(*point) for point in voxel_coords_volume[1:, 0:2]]
+    path = pyx.path.path(*path_points)
+    return path
 
 
-def get_coronal_slice(volume, y=0, shape=(256, 256), size=(256, 256)):
+def get_voxel_slices(volume, mrs):
+    slices = [volume.resample(volume.coronal_vector,
+                           volume.axial_vector,
+                           shape=(1, 256, 256),
+                           centre=(mrs.centre[0], volume.centre[1], volume.centre[2])),
+              volume.resample(volume.sagittal_vector,
+                              -volume.coronal_vector,
+                              shape=(1, 256, 256),
+                              centre=(volume.centre[0], volume.centre[1], mrs.centre[2])),
+              volume.resample(volume.sagittal_vector,
+                              volume.axial_vector,
+                              shape=(1, 256, 256),
+                              centre=(volume.centre[0], mrs.centre[1], volume.centre[2]))]
 
-    volume_centre = volume.to_scanner((np.array(volume.shape[::-1]) - 1) / 2)
+    canvases = [make_canvas(slc) for slc in slices]
+    paths = [get_voxel_path(slc, mrs) for slc in slices]
 
-    II, JJ = make_index_coords(shape, size)
+    combined_canvas = pyx.canvas.canvas()
+    for i in range(3):
+        canvases[i].stroke(paths[i], [voxel_outline_color, voxel_outline_width])
+        combined_canvas.insert(canvases[i], [pyx.trafo.scale(6 / 256).translated(6.5 * i, 0)])
 
-    slice_coords = II[..., np.newaxis] * volume.sagittal_vector + JJ[..., np.newaxis] * volume.axial_vector + volume_centre
-    slice_coords[:, :, 1] = y
-
-    slice_array = scipy.interpolate.interpn([np.arange(dim) for dim in volume.shape],
-                                            volume,
-                                            volume.from_scanner(slice_coords)[..., ::-1],
-                                            "linear",
-                                            bounds_error=False,
-                                            fill_value=0)
-
-    return make_canvas(slice_array)
+    return combined_canvas
