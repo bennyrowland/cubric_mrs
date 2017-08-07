@@ -17,7 +17,8 @@ setup(
         description='a collection of processing scripts for handling MRS data at CUBRIC',
         entry_points={
             "console_scripts": [
-                "mrs_mega = cubric_mrs.megapress:megapress_script"
+                "mrs_mega = cubric_mrs.megapress:megapress_script",
+                "mrs_press = cubric_mrs.press:press_script"
             ]
         },
         classifiers=[

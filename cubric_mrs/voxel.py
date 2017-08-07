@@ -54,7 +54,8 @@ def get_voxel_slices(volume, mrs):
                               shape=(1, 256, 256),
                               centre=(volume.centre[0], mrs.centre[1], volume.centre[2]))]
 
-    canvases = [make_canvas(slc) for slc in slices]
+    scaling_factor = 255 / np.amax(volume)
+    canvases = [make_canvas(slc * scaling_factor) for slc in slices]
     paths = [get_voxel_path(slc, mrs) for slc in slices]
 
     combined_canvas = pyx.canvas.canvas()
