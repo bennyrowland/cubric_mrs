@@ -15,6 +15,11 @@ setup(
         author='bennyrowland',
         author_email='bennyrowland@mac.com',
         description='a collection of processing scripts for handling MRS data at CUBRIC',
+        entry_points={
+            "console_scripts": [
+                "mrs_mega = cubric_mrs.megapress:megapress_script"
+            ]
+        },
         classifiers=[
             # How mature is this project? Common values are
             #   3 - Alpha
@@ -38,6 +43,6 @@ setup(
             'Programming Language :: Python :: 3.4',
             'Programming Language :: Python :: 3.5',
         ],
-        install_requires=['suspect', 'numpy'],
-        test_requires=['pytest', 'requests']
+        install_requires=['suspect', 'numpy', 'Pillow', 'pyx', 'nibabel'],
+        test_requires=['pytest']
 )
