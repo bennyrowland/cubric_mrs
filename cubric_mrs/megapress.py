@@ -29,19 +29,26 @@ def analyse_mega(mega_path, t1_path=None, wref_path=None, out_path=None):
     cc_mega = suspect.processing.channel_combination.combine_channels(mega, channel_weights)
 
     # frequency correction next, as this affects some later stuff
+    # we use a selective frequency range to cover just the metabolite region
+    # although the residual water has more SNR, the Siemens WIP sometimes
+    # produces very variable residual water due to varying suppression
+    frequency_range = mega.slice_ppm(4, 1.7)
+
     def correct_frequency_sr(target):
         def correct_fid(fid):
-            frequency_shift, phase_shift = suspect.processing.frequency_correction.spectral_registration(fid, target)
-            return fid.adjust_frequency(-frequency_shift).adjust_phase(-phase_shift)
+            fs, ps = suspect.processing.frequency_correction.spectral_registration(fid,
+                                                                                   target,
+                                                                                   frequency_range=frequency_range)
+            return fid.adjust_frequency(-fs).adjust_phase(-ps)
         return correct_fid
     sr_aligned_on = np.apply_along_axis(correct_frequency_sr(cc_mega[108, 0]), 1, cc_mega[:, 0])
     sr_aligned_off = np.apply_along_axis(correct_frequency_sr(cc_mega[108, 1]), 1, cc_mega[:, 1])
     sr_on = np.mean(sr_aligned_on, axis=0)
     sr_off = np.mean(sr_aligned_off, axis=0)
     # do an additional SR to align the on with the off
-    global_frequency_shift, global_phase_shift = suspect.processing.frequency_correction.spectral_registration(sr_off,
-                                                                                                               sr_on)
-    sr_off = sr_off.adjust_frequency(-global_frequency_shift).adjust_phase(-global_phase_shift)
+    global_frequency_shift, global_phase_shift = suspect.processing.frequency_correction.spectral_registration(sr_on,
+                                                                                                               sr_off)
+    sr_on = sr_on.adjust_frequency(-global_frequency_shift).adjust_phase(-global_phase_shift)
     # align the biggest peak in the diff spectrum (NAA) to 2.01ppm
     diff = sr_on - sr_off
     sr_peak_index = np.argmax(np.abs(diff.spectrum()))
@@ -55,13 +62,14 @@ def analyse_mega(mega_path, t1_path=None, wref_path=None, out_path=None):
     cc_mega = cc_mega.adjust_frequency(frequency_shift)
 
     # now we will do some water removal from sr_off, which makes the phase estimation better
+    # also remove the lipid/MM resonances as they seem to cause phasing problems too.
     components = suspect.processing.water_suppression.hsvd(sr_off, 20)
-    water_components = [component for component in components if component["frequency"] < 70]
+    water_components = [component for component in components if component["frequency"] < 70 or component["frequency"] > 380]
     water_fid = suspect.processing.water_suppression.construct_fid(water_components, mega.time_axis())
     dry_off = sr_off - water_fid
 
     # now do the phase estimation
-    zp, fp = suspect.processing.phase.mag_real(dry_off)
+    zp, fp = suspect.processing.phase.mag_real(dry_off, range_hz=(90, 350))
 
     sr_diff = (sr_on - sr_off).adjust_phase(zp, fp)
 
