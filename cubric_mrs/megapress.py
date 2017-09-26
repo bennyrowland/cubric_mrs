@@ -32,7 +32,7 @@ def analyse_mega(mega_path, t1_path=None, wref_path=None, out_path=None):
     # we use a selective frequency range to cover just the metabolite region
     # although the residual water has more SNR, the Siemens WIP sometimes
     # produces very variable residual water due to varying suppression
-    frequency_range = mega.slice_ppm(4.2, 1.7)
+    frequency_range = mega.slice_ppm(4, 1.7)
 
     def correct_frequency_sr(target):
         def correct_fid(fid):
@@ -46,9 +46,9 @@ def analyse_mega(mega_path, t1_path=None, wref_path=None, out_path=None):
     sr_on = np.mean(sr_aligned_on, axis=0)
     sr_off = np.mean(sr_aligned_off, axis=0)
     # do an additional SR to align the on with the off
-    global_frequency_shift, global_phase_shift = suspect.processing.frequency_correction.spectral_registration(sr_off,
-                                                                                                               sr_on)
-    sr_off = sr_off.adjust_frequency(-global_frequency_shift).adjust_phase(-global_phase_shift)
+    global_frequency_shift, global_phase_shift = suspect.processing.frequency_correction.spectral_registration(sr_on,
+                                                                                                               sr_off)
+    sr_on = sr_on.adjust_frequency(-global_frequency_shift).adjust_phase(-global_phase_shift)
     # align the biggest peak in the diff spectrum (NAA) to 2.01ppm
     diff = sr_on - sr_off
     sr_peak_index = np.argmax(np.abs(diff.spectrum()))
@@ -69,7 +69,7 @@ def analyse_mega(mega_path, t1_path=None, wref_path=None, out_path=None):
     dry_off = sr_off - water_fid
 
     # now do the phase estimation
-    zp, fp = suspect.processing.phase.mag_real(dry_off)
+    zp, fp = suspect.processing.phase.mag_real(dry_off, range_hz=(90, 350))
 
     sr_diff = (sr_on - sr_off).adjust_phase(zp, fp)
 
