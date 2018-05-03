@@ -79,7 +79,7 @@ def analyse_mega(mega_path, t1_path=None, wref_path=None, out_path=None):
     simple_off = np.mean(phased_mega[:, 1], axis=0)
     simple_diff = simple_on - simple_off
 
-    tarquin_results = suspect.io.tarquin.process(sr_diff, {"pul_seq": "mega_press",
+    tarquin_results = suspect.io.tarquin.process(sr_diff, options={"pul_seq": "mega_press",
                                                            "int_basis": "megapress_gaba",
                                                            "ref_signals": "1h_naa",
                                                            "start_pnt": "10",

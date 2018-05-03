@@ -46,3 +46,23 @@ def quality_table(quality_info):
 
     quality_table_latex = table_runner.text(0, 0, quality_table_string, [pyx.text.valign.top])
     return quality_table_latex
+
+
+def voxel_properties_table(voxel_properties):
+    table_runner = pyx.text.LatexRunner()
+    table_runner.preamble("\\usepackage{tabularx}")
+
+    property_string = """
+    Voxel volume / mm$^3$ & {volume}\\\\
+    Grey matter & {gm:.1%}\\%\\\\
+    White matter & {wm:.1%}\\%\\\\
+    CSF & {csf:.1%}\\%\\\\
+    Water Conc. & {water_conc}\\\\
+    Water Att. & {water_att:.3f}\\\\
+    """.format(**voxel_properties).replace("%", "\%")
+
+    property_table_string = "\\begin{{tabularx}}{{9cm}}{{X r}}\nVoxel Properties&\\\\\n\hline\n{}\\end{{tabularx}}".format(
+        "".join(property_string))
+
+    property_table_latex = table_runner.text(0, 0, property_table_string, [pyx.text.valign.top])
+    return property_table_latex
