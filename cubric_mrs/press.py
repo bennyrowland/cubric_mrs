@@ -78,7 +78,9 @@ def analyse_press(data_path, t1_path=None, wref_path=None, out_path=None, out_cs
         t1_path = os.path.abspath(t1_path)
         if os.path.splitext(t1_path)[1].upper() in [".IMA", ".DCM"]:
             t1 = suspect.image.load_dicom_volume(t1_path)
-        elif os.path.splitext(t1_path)[1].upper() == ".NII":
+        elif os.path.splitext(t1_path)[1].upper() in [".NII"]:
+            t1 = suspect.image.load_nifti(t1_path)
+        elif t1_path.upper().endswith(".NII.GZ"):
             t1 = suspect.image.load_nifti(t1_path)
         else:
             print("could not load t1 from {}".format(os.path.splitext(t1_path)[1].upper()))

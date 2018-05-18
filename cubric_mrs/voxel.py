@@ -120,7 +120,7 @@ def classify_tissues(volume_path):
         save_nifti.inputs.dicom_file = volume_path
         wf.connect([(save_nifti, bet, [("nifti_file", "in_file")])])
     else:
-        bet.inputs.in_file = volume_path
+        bet.inputs.in_file = os.path.abspath(volume_path)
 
     result = wf.run()
 
